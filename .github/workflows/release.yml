@@ -143,19 +143,27 @@ jobs:
   build_linux_arm64:
     needs: [resolve, open_release]
     runs-on: ubuntu-24.04-arm
+    container: debian:bookworm
+    defaults:
+      run:
+        shell: bash
     env:
       APP: ${{ needs.resolve.outputs.app }}
       TAG: ${{ needs.resolve.outputs.tag }}
     steps:
+      - name: Install required libraries and tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 wget file binutils gh build-essential pkg-config cmake libasound2-dev libssl-dev libxcb-shape0-dev libxcb-xfixes0-dev nasm
+
       - uses: actions/checkout@v6
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
-      - name: Install required libraries
+      - name: Install Rust toolchain
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev libssl-dev libxcb-shape0-dev libxcb-xfixes0-dev nasm
-          sudo apt-get install -y libfuse2 || sudo apt-get install -y libfuse2t64
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           git submodule update --init
 
       - name: Build deb
@@ -173,6 +181,13 @@ jobs:
           DEB=$(ls -1 ../../target/debian/*.deb | grep -E "$(echo "$APP" | tr '_' '-')" | tail -n 1)
           mv "$DEB" "../../${APP}-${version}-arm64.deb"
 
+      - name: Check Debian 12 compatibility
+        run: |
+          apt-get install --simulate "./${APP}-${VERSION}-arm64.deb"
+          required_glibc=$(readelf --version-info "target/release/$APP" | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -n 1)
+          echo "Highest required glibc version: $required_glibc"
+          dpkg --compare-versions "${required_glibc#GLIBC_}" le 2.36
+
       - name: Build AppImage
         run: |
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage
@@ -186,7 +201,7 @@ jobs:
 
           app_img=$(python3 tools/get_app_img.py "$APP" "$VERSION" aarch64)
           echo "APP_IMG=$app_img" >> "$GITHUB_ENV"
-          ARCH=aarch64 ./appimagetool-aarch64.AppImage "$APP-appimage" "$app_img"
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=aarch64 ./appimagetool-aarch64.AppImage "$APP-appimage" "$app_img"
 
       - name: Attach Linux arm64 assets
         env:
