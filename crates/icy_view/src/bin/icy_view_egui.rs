@@ -106,10 +106,7 @@ fn main() -> anyhow::Result<()> {
     }
     let native = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
-        wgpu_options: egui_wgpu::WgpuConfiguration {
-            present_mode: egui_wgpu::wgpu::PresentMode::AutoNoVsync,
-            ..Default::default()
-        },
+        wgpu_options: icy_engine_gui::egui::wgpu_configuration(),
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1100.0, 760.0])
             .with_min_inner_size([360.0, 240.0])

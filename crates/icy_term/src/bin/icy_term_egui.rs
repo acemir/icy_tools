@@ -1933,11 +1933,8 @@ fn main() -> anyhow::Result<()> {
     let icon = eframe::icon_data::from_png_bytes(include_bytes!("../../build/linux/128x128.png"))?;
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
-        wgpu_options: egui_wgpu::WgpuConfiguration {
-            // Waiting for vsync halves the frame rate while the compositor resizes the window.
-            present_mode: egui_wgpu::wgpu::PresentMode::AutoNoVsync,
-            ..Default::default()
-        },
+        // Waiting for vsync halves the frame rate while the compositor resizes the window.
+        wgpu_options: icy_engine_gui::egui::wgpu_configuration(),
         multisampling: 0,
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1000.0, 720.0])
