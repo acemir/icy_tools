@@ -148,17 +148,22 @@ jobs:
       run:
         shell: bash
     env:
+      HOME: /root
       APP: ${{ needs.resolve.outputs.app }}
       TAG: ${{ needs.resolve.outputs.tag }}
     steps:
       - name: Install required libraries and tools
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git python3 wget file binutils gh build-essential pkg-config cmake libasound2-dev libssl-dev libxcb-shape0-dev libxcb-xfixes0-dev nasm
+          apt-get install -y --no-install-recommends ca-certificates curl git python3 wget file binutils gh build-essential pkg-config cmake libasound2-dev libssl-dev libxcb-shape0-dev libxcb-xfixes0-dev libglib2.0-0 nasm
 
       - uses: actions/checkout@v6
         with:
           ref: ${{ needs.resolve.outputs.tag }}
+
+      - name: Mark repository safe for git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Install Rust toolchain
         run: |
