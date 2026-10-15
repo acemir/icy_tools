@@ -140,6 +140,64 @@ jobs:
             "$APP_IMG" \
             --repo "$REPO" --clobber
 
+  build_linux_arm64:
+    needs: [resolve, open_release]
+    runs-on: ubuntu-24.04-arm
+    env:
+      APP: ${{ needs.resolve.outputs.app }}
+      TAG: ${{ needs.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+
+      - name: Install required libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libasound2-dev libssl-dev libxcb-shape0-dev libxcb-xfixes0-dev nasm
+          sudo apt-get install -y libfuse2 || sudo apt-get install -y libfuse2t64
+          git submodule update --init
+
+      - name: Build deb
+        run: |
+          cargo install cargo-deb
+          version=$(python3 tools/prep_diz.py "$APP" "file_id.diz")
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "Version: $version"
+          cd "crates/$APP"
+          if [ "$APP" = "icy_draw" ]; then
+            cargo deb --locked --features rav1e-asm
+          else
+            cargo deb --locked
+          fi
+          DEB=$(ls -1 ../../target/debian/*.deb | grep -E "$(echo "$APP" | tr '_' '-')" | tail -n 1)
+          mv "$DEB" "../../${APP}-${version}-arm64.deb"
+
+      - name: Build AppImage
+        run: |
+          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage
+          chmod +x appimagetool-aarch64.AppImage
+          mkdir -p "$APP-appimage/usr/bin"
+          cp "crates/$APP/build/linux/256x256.png" "$APP-appimage/$APP.png"
+          cp "crates/$APP/build/linux/$APP.desktop" "$APP-appimage/"
+          cp "target/release/$APP" "$APP-appimage/usr/bin/"
+          printf '%s\n' '#!/bin/bash' "exec \"\$(dirname \"\$0\")/usr/bin/$APP\" \"\$@\"" > "$APP-appimage/AppRun"
+          chmod a+x "$APP-appimage/AppRun"
+
+          app_img=$(python3 tools/get_app_img.py "$APP" "$VERSION" aarch64)
+          echo "APP_IMG=$app_img" >> "$GITHUB_ENV"
+          ARCH=aarch64 ./appimagetool-aarch64.AppImage "$APP-appimage" "$app_img"
+
+      - name: Attach Linux arm64 assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh release upload "$TAG" \
+            "${APP}-${VERSION}-arm64.deb" \
+            "$APP_IMG" \
+            --repo "$REPO" --clobber
+
   build_windows:
     needs: [resolve, open_release]
     runs-on: windows-latest
