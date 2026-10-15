@@ -103,10 +103,7 @@ fn main() -> anyhow::Result<()> {
                 .with_inner_size(initial_window_size)
                 .with_min_inner_size([440.0, 300.0])
                 .with_icon(eframe::icon_data::from_png_bytes(include_bytes!("../../build/linux/256x256.png"))?),
-            wgpu_options: egui_wgpu::WgpuConfiguration {
-                present_mode: egui_wgpu::wgpu::PresentMode::AutoNoVsync,
-                ..Default::default()
-            },
+            wgpu_options: icy_engine_gui::egui::wgpu_configuration(),
             ..Default::default()
         },
         Box::new(move |creation| {

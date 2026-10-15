@@ -89,10 +89,7 @@ fn main() -> anyhow::Result<()> {
         eframe::NativeOptions {
             renderer: eframe::Renderer::Wgpu,
             viewport: viewport(),
-            wgpu_options: egui_wgpu::WgpuConfiguration {
-                present_mode: egui_wgpu::wgpu::PresentMode::AutoNoVsync,
-                ..Default::default()
-            },
+            wgpu_options: icy_engine_gui::egui::wgpu_configuration(),
             ..Default::default()
         },
         Box::new(move |creation| {
